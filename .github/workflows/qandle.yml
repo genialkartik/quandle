@@ -1,0 +1,73 @@
+name: Qandle Auto Clock In/Out
+
+on:
+  schedule:
+    # Clock In  — 12:10 PM IST (06:40 UTC), Mon–Fri
+    - cron: "40 6 * * 1-5"
+    # Clock Out — 11:40 PM IST (18:10 UTC), Mon–Fri
+    - cron: "10 18 * * 1-5"
+
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to perform"
+        required: true
+        default: "clock-in"
+        type: choice
+        options:
+          - clock-in
+          - clock-out
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: Clock In (scheduled)
+        if: github.event.schedule == '40 6 * * 1-5'
+        run: node clock_in.js
+        env:
+          QANDLE_EMAIL: ${{ secrets.QANDLE_EMAIL }}
+          QANDLE_PASSWORD: ${{ secrets.QANDLE_PASSWORD }}
+          HOLIDAYS: ${{ secrets.HOLIDAYS }}
+
+      - name: Clock Out (scheduled)
+        if: github.event.schedule == '10 18 * * 1-5'
+        run: node clock_out.js
+        env:
+          QANDLE_EMAIL: ${{ secrets.QANDLE_EMAIL }}
+          QANDLE_PASSWORD: ${{ secrets.QANDLE_PASSWORD }}
+          HOLIDAYS: ${{ secrets.HOLIDAYS }}
+
+      - name: Clock In (manual)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'clock-in'
+        run: node clock_in.js
+        env:
+          QANDLE_EMAIL: ${{ secrets.QANDLE_EMAIL }}
+          QANDLE_PASSWORD: ${{ secrets.QANDLE_PASSWORD }}
+          HOLIDAYS: ${{ secrets.HOLIDAYS }}
+
+      - name: Clock Out (manual)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'clock-out'
+        run: node clock_out.js
+        env:
+          QANDLE_EMAIL: ${{ secrets.QANDLE_EMAIL }}
+          QANDLE_PASSWORD: ${{ secrets.QANDLE_PASSWORD }}
+          HOLIDAYS: ${{ secrets.HOLIDAYS }}
