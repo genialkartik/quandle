@@ -140,7 +140,23 @@ async function clockOut(driver) {
   );
   await driver.wait(until.elementIsVisible(btn), TIMEOUT);
   await btn.click();
-  console.log("Clocked OUT successfully!");
+  console.log("Clicked Clock Out button. Waiting for confirmation modal...");
+
+  // Wait for the confirmation modal to appear
+  const modal = await driver.wait(
+    until.elementLocated(By.css('.ant-modal-wrap .ant-modal[role="dialog"]')),
+    TIMEOUT,
+  );
+  await driver.wait(until.elementIsVisible(modal), TIMEOUT);
+  console.log("Confirmation modal appeared.");
+
+  // Click the "Yes" button to confirm clock out
+  const yesBtn = await modal.findElement(
+    By.xpath('.//button[contains(@class,"ant-btn") and .//span[text()="Yes"]]'),
+  );
+  await driver.wait(until.elementIsVisible(yesBtn), TIMEOUT);
+  await yesBtn.click();
+  console.log("Confirmed clock out. Clocked OUT successfully!");
 }
 
 async function detectState(driver) {
