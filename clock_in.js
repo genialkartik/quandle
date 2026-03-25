@@ -12,11 +12,30 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function main() {
-  const now = new Date(
+function getISTNow() {
+  return new Date(
     new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
   );
+}
+
+async function main() {
+  const now = getISTNow();
   if (shouldSkipToday(now)) return;
+
+  // Wait until CLOCK_IN_START_AT if cron fired early
+  const startAt = process.env.CLOCK_IN_START_AT;
+  if (startAt) {
+    const [h, m] = startAt.split(":").map(Number);
+    const target = new Date(now);
+    target.setHours(h, m, 0, 0);
+    const waitMs = target - now;
+    if (waitMs > 0 && waitMs <= 30 * 60 * 1000) {
+      console.log(
+        `Waiting ${(waitMs / 60000).toFixed(1)} min until ${startAt} IST...`,
+      );
+      await sleep(waitMs);
+    }
+  }
 
   const delayMs = Math.floor(Math.random() * MAX_DELAY_MIN * 60 * 1000);
   console.log(

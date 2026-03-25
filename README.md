@@ -4,8 +4,9 @@ Automated daily clock-in and clock-out for [Qandle](https://creospan.qandle.com/
 
 ## Features
 
-- **Auto Clock In** — randomly between 12:10 PM and 12:18 PM IST
-- **Auto Clock Out** — randomly between 11:40 PM and 11:48 PM IST
+- **Auto Clock In** — at `CLOCK_IN_START_AT` IST + random 0–8 min delay
+- **Auto Clock Out** — at `CLOCK_OUT_END_AT` IST − 10 min + random 0–8 min delay
+- **Configurable timing** — change `CLOCK_IN_START_AT` and `CLOCK_OUT_END_AT` secrets to adjust
 - **Random delay** — 0–8 minute random wait before each action (looks natural)
 - **Weekends skipped** — no clock in/out on Saturday or Sunday
 - **Holiday support** — add dates to skip via `HOLIDAYS` secret
@@ -33,8 +34,10 @@ Two separate GitHub Actions cron jobs run daily (Mon–Fri):
 
 | Cron (UTC)      | IST Time | Script         | Random Delay | Actual Window       |
 | --------------- | -------- | -------------- | ------------ | ------------------- |
-| `40 6 * * 1-5`  | 12:10 PM | `clock_in.js`  | 0–8 min      | 12:10 PM – 12:18 PM |
+| `30 2 * * 1-5`  | 8:00 AM  | `clock_in.js`  | 0–8 min      | 8:00 AM – 8:08 AM   |
 | `10 18 * * 1-5` | 11:40 PM | `clock_out.js` | 0–8 min      | 11:40 PM – 11:48 PM |
+
+Timing is controlled by `CLOCK_IN_START_AT` and `CLOCK_OUT_END_AT` GitHub secrets. The scripts wait until the target IST time if the cron fires early, then add a random 0–8 min delay.
 
 Each job: **~10 min** (8 min max delay + ~2 min execution) × 2 jobs × 22 days = **~440 min/month**.
 
@@ -53,7 +56,7 @@ cat > .env <<EOF
 QANDLE_EMAIL=your.email@company.com
 QANDLE_PASSWORD=your_password
 HOLIDAYS=2026-01-26,2026-03-14,2026-08-15,2026-10-02
-CLOCK_IN_START_AT=12:10
+CLOCK_IN_START_AT=8:00
 CLOCK_OUT_END_AT=23:50
 EOF
 
@@ -83,29 +86,34 @@ git push -u origin main
 
 Go to your repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
 
-| Secret Name       | Value                                                                   |
-| ----------------- | ----------------------------------------------------------------------- |
-| `QANDLE_EMAIL`    | Your Qandle email (e.g. `kartik.tyagi@creospan.com`)                    |
-| `QANDLE_PASSWORD` | Your Qandle password                                                    |
-| `HOLIDAYS`        | Comma-separated dates to skip (e.g. `2026-01-26,2026-08-15,2026-10-02`) |
+| Secret Name         | Value                                                                   |
+| ------------------- | ----------------------------------------------------------------------- |
+| `QANDLE_EMAIL`      | Your Qandle email (e.g. `kartik.tyagi@creospan.com`)                    |
+| `QANDLE_PASSWORD`   | Your Qandle password                                                    |
+| `HOLIDAYS`          | Comma-separated dates to skip (e.g. `2026-01-26,2026-08-15,2026-10-02`) |
+| `CLOCK_IN_START_AT` | Clock-in time in IST (e.g. `8:00`)                                      |
+| `CLOCK_OUT_END_AT`  | Clock-out deadline in IST (e.g. `23:50`)                                |
 
 ### 3. How it works
 
 The workflow uses **two separate cron schedules**:
 
-- **Clock In cron** (`40 6 * * 1-5`) fires at 12:10 PM IST → waits 0–8 min → clocks in
-- **Clock Out cron** (`10 18 * * 1-5`) fires at 11:40 PM IST → waits 0–8 min → clocks out
+- **Clock In cron** (`30 2 * * 1-5`) fires at 8:00 AM IST → waits until `CLOCK_IN_START_AT` if early → random 0–8 min → clocks in
+- **Clock Out cron** (`10 18 * * 1-5`) fires at 11:40 PM IST → waits until `CLOCK_OUT_END_AT − 10 min` if early → random 0–8 min → clocks out
 
 Each run takes ~10 min max. The timeout is set to 15 min as a safety buffer.
 
 ### 4. Changing the schedule
 
-To change clock-in/out times, update **both** the cron in `.github/workflows/qandle.yml` and the env vars:
+To change clock-in/out times:
 
-1. Convert your desired IST time to UTC: `UTC = IST - 5:30`
-2. Clock In cron = your desired start time in UTC
-3. Clock Out cron = your desired end time minus 10 minutes, in UTC
-4. Update `CLOCK_IN_START_AT` and `CLOCK_OUT_END_AT` in `.env` / `.env.example`
+1. Update the **GitHub secrets** `CLOCK_IN_START_AT` and `CLOCK_OUT_END_AT` (IST, e.g. `8:00` and `23:50`).
+2. Update the **cron expressions** in `.github/workflows/qandle.yml` to match (convert to UTC: `UTC = IST − 5:30`).
+   - Clock In cron = `CLOCK_IN_START_AT` converted to UTC
+   - Clock Out cron = `CLOCK_OUT_END_AT` minus 10 min, converted to UTC
+3. Push the updated YAML to the default branch.
+
+The scripts handle minor cron drift (up to 30 min early) by waiting until the target time from the secret.
 
 Example: Clock in at 10:00 AM IST, clock out by 11:00 PM IST:
 
@@ -114,6 +122,8 @@ schedule:
   - cron: "30 4 * * 1-5" # 10:00 AM IST
   - cron: "20 17 * * 1-5" # 10:50 PM IST (11:00 PM minus 10 min)
 ```
+
+Then set secrets: `CLOCK_IN_START_AT=10:00`, `CLOCK_OUT_END_AT=23:00`.
 
 ### 5. Manual trigger (from phone or browser)
 

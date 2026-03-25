@@ -2,8 +2,8 @@ name: Qandle Auto Clock In/Out
 
 on:
   schedule:
-    # Clock In  — 7:35 AM IST (02:05 UTC), Mon–Fri
-    - cron: "5 2 * * 1-5"
+    # Clock In  — 8:00 AM IST (02:30 UTC), Mon–Fri
+    - cron: "30 2 * * 1-5"
     # Clock Out — 11:40 PM IST (18:10 UTC), Mon–Fri
     - cron: "10 18 * * 1-5"
 
@@ -43,12 +43,13 @@ jobs:
           chrome-version: stable
 
       - name: Clock In (scheduled)
-        if: github.event.schedule == '5 2 * * 1-5'
+        if: github.event.schedule == '30 2 * * 1-5'
         run: node clock_in.js
         env:
           QANDLE_EMAIL: ${{ secrets.QANDLE_EMAIL }}
           QANDLE_PASSWORD: ${{ secrets.QANDLE_PASSWORD }}
           HOLIDAYS: ${{ secrets.HOLIDAYS }}
+          CLOCK_IN_START_AT: ${{ secrets.CLOCK_IN_START_AT }}
 
       - name: Clock Out (scheduled)
         if: github.event.schedule == '10 18 * * 1-5'
@@ -57,6 +58,7 @@ jobs:
           QANDLE_EMAIL: ${{ secrets.QANDLE_EMAIL }}
           QANDLE_PASSWORD: ${{ secrets.QANDLE_PASSWORD }}
           HOLIDAYS: ${{ secrets.HOLIDAYS }}
+          CLOCK_OUT_END_AT: ${{ secrets.CLOCK_OUT_END_AT }}
 
       - name: Clock In (manual)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'clock-in'
@@ -65,6 +67,7 @@ jobs:
           QANDLE_EMAIL: ${{ secrets.QANDLE_EMAIL }}
           QANDLE_PASSWORD: ${{ secrets.QANDLE_PASSWORD }}
           HOLIDAYS: ${{ secrets.HOLIDAYS }}
+          CLOCK_IN_START_AT: ${{ secrets.CLOCK_IN_START_AT }}
 
       - name: Clock Out (manual)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'clock-out'
@@ -73,3 +76,4 @@ jobs:
           QANDLE_EMAIL: ${{ secrets.QANDLE_EMAIL }}
           QANDLE_PASSWORD: ${{ secrets.QANDLE_PASSWORD }}
           HOLIDAYS: ${{ secrets.HOLIDAYS }}
+          CLOCK_OUT_END_AT: ${{ secrets.CLOCK_OUT_END_AT }}
