@@ -2,8 +2,8 @@ name: Qandle Auto Clock In/Out
 
 on:
   schedule:
-    # Clock In  — 12:10 PM IST (06:40 UTC), Mon–Fri
-    - cron: "40 6 * * 1-5"
+    # Clock In  — 7:35 AM IST (02:05 UTC), Mon–Fri
+    - cron: "5 2 * * 1-5"
     # Clock Out — 11:40 PM IST (18:10 UTC), Mon–Fri
     - cron: "10 18 * * 1-5"
 
@@ -43,7 +43,7 @@ jobs:
           chrome-version: stable
 
       - name: Clock In (scheduled)
-        if: github.event.schedule == '40 6 * * 1-5'
+        if: github.event.schedule == '5 2 * * 1-5'
         run: node clock_in.js
         env:
           QANDLE_EMAIL: ${{ secrets.QANDLE_EMAIL }}
